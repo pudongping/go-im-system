@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -61,6 +62,9 @@ func (s *Server) Handler(conn net.Conn) {
 	// 用户上线操作
 	user.Online()
 
+	// 监听用户是否为活跃的 channel
+	isLive := make(chan bool)
+
 	// 接收客户端发送的消息
 	go func() {
 		buf := make([]byte, 4096)
@@ -85,11 +89,42 @@ func (s *Server) Handler(conn net.Conn) {
 			// 用户针对 msg 进行消息处理
 			user.DoMessage(msg)
 
+			// 用户如果发送了任意消息，则代表当前用户是一个活跃中的用户
+			isLive <- true
+
 		}
 	}()
 
-	// 当前 handler 阻塞
-	select {}
+	for {
+		// 当前 handler 阻塞
+		select {
+		// 这里的 case <- isLive 必须要写在上面，因为一旦触发了这里的 case，那么其实下面的 case 也会尝试着去触发
+		// 在第一个 case 中没有写 break 或者 return 语句的情况下
+		case <-isLive:
+			// 当前用户是活跃的，应该重置定时器
+
+			// 不做任何事情，是为了激活 select 语句，更新下面的定时器
+
+		// 启动一个定时器，这个定时器其实是一个 channel
+		// 10s 后会被超时
+		case <-time.After(time.Second * 10):
+			// 已经超时
+			// 将当前的 user 强制关闭
+
+			user.SendMsg("你被踢掉了\n")
+
+			// 销毁用户的资源
+			close(user.C)
+
+			// 关闭连接
+			conn.Close()
+
+			// 退出当前的 handler
+			// 不写 return 的话，也可以写 runtime.Goexit()
+			//runtime.Goexit()
+			return
+		}
+	}
 
 }
 
