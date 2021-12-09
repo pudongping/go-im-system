@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"strings"
 )
 
 type User struct {
@@ -71,6 +72,25 @@ func (u *User) DoMessage(msg string) {
 			u.SendMsg(onlineMsg)
 		}
 		u.server.mapLock.Unlock()
+	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		// 消息格式为： rename|alex
+		// 用的新昵称
+		newName := strings.Split(msg, "|")[1]
+
+		// 判断 name 是否存在
+		if _, ok := u.server.OnlineMap[newName]; ok {
+			u.SendMsg("当前用户名已经被使用\n")
+		} else {
+			u.server.mapLock.Lock()
+			// 将老的用户昵称删除掉
+			delete(u.server.OnlineMap, u.Name)
+			// 添加新的用户昵称
+			u.server.OnlineMap[newName] = u
+			u.server.mapLock.Unlock()
+
+			u.Name = newName
+			u.SendMsg(fmt.Sprintf("您已经更新您的用户名，新的用户名为：[%s]\n", newName))
+		}
 
 	} else {
 		// 将得到的消息进行广播
