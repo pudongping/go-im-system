@@ -64,6 +64,7 @@ func (u *User) DoMessage(msg string) {
 
 	// 当客户端发送 `who` 指令，则查询当前在线的用户有哪些
 	if msg == "who" {
+		// 消息格式为 who
 		// 查询当前在线用户都有哪些
 		u.server.mapLock.Lock()
 		for _, user := range u.server.OnlineMap {
@@ -91,6 +92,33 @@ func (u *User) DoMessage(msg string) {
 			u.Name = newName
 			u.SendMsg(fmt.Sprintf("您已经更新您的用户名，新的用户名为：[%s]\n", newName))
 		}
+
+	} else if len(msg) > 4 && msg[:3] == "to|" {
+		// 发送消息给指定人，消息格式为： to|{用户名}|{消息内容}，比如：to|alex|hello
+
+		// 1、获取对方的用户名
+		remoteName := strings.Split(msg, "|")[1]
+		if remoteName == "" {
+			u.SendMsg("消息格式不正确，请使用 \"to|张三|你好啊\"格式。 \n")
+			return
+		}
+
+		// 2、根据用户名，得到对方 User 对象
+		remoteUser, ok := u.server.OnlineMap[remoteName]
+		if !ok {
+			u.SendMsg("该用户名不存在\n")
+			return
+		}
+
+		// 3、获取消息内容，通过对方的 User 对象将消息内容发送过去
+		content := strings.Split(msg, "|")[2]
+		if content == "" {
+			u.SendMsg("无消息内容，请重发\n")
+			return
+		}
+
+		// 将消息内容发送给指定用户
+		remoteUser.SendMsg(fmt.Sprintf("%s 对您说： %s\n", u.Name, content))
 
 	} else {
 		// 将得到的消息进行广播
