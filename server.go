@@ -106,8 +106,8 @@ func (s *Server) Handler(conn net.Conn) {
 			// 不做任何事情，是为了激活 select 语句，更新下面的定时器
 
 		// 启动一个定时器，这个定时器其实是一个 channel
-		// 10s 后会被超时
-		case <-time.After(time.Second * 10):
+		// 5min 后会被超时
+		case <-time.After(time.Second * 300):
 			// 已经超时
 			// 将当前的 user 强制关闭
 
