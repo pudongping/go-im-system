@@ -3,13 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
 type Client struct {
-	ServerIp   string // 链接 ip 地址
-	ServerPort int    // 链接端口
-	Name       string
+	ServerIp   string   // 链接 ip 地址
+	ServerPort int      // 链接端口
+	Name       string   // 用户名
 	conn       net.Conn // 链接句柄
 	flag       int      // 当前 client 的模式
 }
@@ -36,6 +38,18 @@ func NewClient(serverIp string, serverPort int) *Client {
 	return client
 }
 
+// 处理 server 回应的消息，直接显示到标准输出即可
+func (c *Client) DealResponse() {
+	// 一旦 c.conn 有数据，就直接 copy 到 stdout 标准输出上，永久阻塞监听
+	io.Copy(os.Stdout, c.conn)
+
+	//for {
+	//	buf := make()
+	//	c.conn.Read(buf)
+	//	fmt.Println(buf)
+	//}
+}
+
 func (c *Client) menu() bool {
 	var flag int
 
@@ -57,6 +71,22 @@ func (c *Client) menu() bool {
 
 }
 
+func (c *Client) UpdateName() bool {
+
+	fmt.Println(">>>请输入用户名：")
+	fmt.Scanln(&c.Name)
+
+	sendMsg := fmt.Sprintf("rename|%s\n", c.Name)
+	// 发送消息
+	_, err := c.conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("conn.Write err:", err)
+		return false
+	}
+
+	return true
+}
+
 func (c *Client) Run() {
 	if c.flag != 0 {
 		for c.menu() != true {
@@ -75,7 +105,8 @@ func (c *Client) Run() {
 			break
 		case 3:
 			// 更新用户名
-			fmt.Println("更新用户名选择")
+			//fmt.Println("更新用户名选择")
+			c.UpdateName()
 			break
 		}
 	}
@@ -102,6 +133,9 @@ func main() {
 		fmt.Println(">>>>>>>> 链接服务器失败……")
 		return
 	}
+
+	// 单独开启一个 goroutine 去处理 server 的回执消息
+	go client.DealResponse()
 
 	fmt.Println(">>>>>>>> 链接服务器成功……")
 
