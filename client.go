@@ -71,12 +71,41 @@ func (c *Client) menu() bool {
 
 }
 
+func (c *Client) PublicChat() {
+	// 提示用户输入消息
+	var chatMsg string
+
+	fmt.Println(">>>>请输入聊天内容，exit退出")
+	fmt.Scanln(&chatMsg)
+
+	for chatMsg != "exit" {
+		// 发送给服务器
+
+		// 消息不为空则发送
+		if len(chatMsg) != 0 {
+			sendMsg := chatMsg + "\n"
+			_, err := c.conn.Write([]byte(sendMsg))
+			if err != nil {
+				fmt.Println("conn Write err:", err)
+				break
+			}
+		}
+
+		chatMsg = ""
+		fmt.Println(">>>>请输入聊天内容，exit退出")
+		fmt.Scanln(&chatMsg)
+
+	}
+
+}
+
 func (c *Client) UpdateName() bool {
 
 	fmt.Println(">>>请输入用户名：")
 	fmt.Scanln(&c.Name)
 
 	sendMsg := fmt.Sprintf("rename|%s\n", c.Name)
+	//sendMsg := "rename|" + c.Name + "\n"
 	// 发送消息
 	_, err := c.conn.Write([]byte(sendMsg))
 	if err != nil {
@@ -97,7 +126,8 @@ func (c *Client) Run() {
 		switch c.flag {
 		case 1:
 			// 公聊模式
-			fmt.Println("公聊模式选择")
+			//fmt.Println("公聊模式选择")
+			c.PublicChat()
 			break
 		case 2:
 			// 私聊模式
